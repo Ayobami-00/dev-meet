@@ -92,7 +92,6 @@ app.post("/signup", (request, response) => {
   }
 
   if(isEmpty(newUser.password)) errors.password = 'Must not be empty'
-  //TODO: Fix issue with the code below.S
   if(newUser.password != newUser.confirmPassword) errors.confirmPassword = 'Passwords must match';
   if(isEmpty(newUser.handle)) errors.handle = 'Must not be empty'
 
@@ -100,7 +99,7 @@ app.post("/signup", (request, response) => {
 
   // TOOD: validate data
   let token, userId;
-  db.doc('/users/${newuser.handle}').get()
+  db.doc(`/users/${newUser.handle}`).get()
   .then(doc => {
       if(doc.exists){
           return response.status(400).json({ handle: 'This handle is already taken'});
@@ -136,34 +135,37 @@ app.post("/signup", (request, response) => {
       }
      
   })
-
-  app.post('/login',(request,response)=>{
-      const user = {
-          email: request.body.email,
-          password: request.body.password
-      };
-
-      let erros = {}
-
-      if(isEmpty(user.email)) errors.email = 'Must not be empty';
-      if(isEmpty(user.password)) errors.password = 'Must not be empty';
-
-      if(Object.keys(erros).length > 0) return response.status(400).json(errors);
-      
-      firebase.auth().signInWithEmailAndPassword(user.email,user.password)
-      .then(data =>{
-          return data.user.getIdToken();
-      })
-      .then(token=> {
-          return response.json({token});
-      })
-      .catch((error)=>{
-          console.error(error);
-          return response.status(500).json({error: error.code})
-      })
+});
 
 
+app.post("/login",(request,response)=>{
+  const user = {
+      email: request.body.email,
+      password: request.body.password
+  };
+
+  let errors = {}
+
+  if(isEmpty(user.email)) errors.email = 'Must not be empty';
+  if(isEmpty(user.password)) errors.password = 'Must not be empty';
+
+  if(Object.keys(errors).length > 0) return response.status(400).json(errors);
+  
+  firebase.auth().signInWithEmailAndPassword(user.email,user.password)
+  .then(data =>{
+      return data.user.getIdToken();
+  })
+  .then(token=> {
+      return response.json({token});
+  })
+  .catch((error)=>{
+      console.error(error);
+      if (error.code == "auth/wrong-password"){
+        return response.status(403).json({general: 'Wrong credentials, please try again'});
+      }else return response.status(500).json({error: error.code})
   })
 
+
 });
+
 exports.api = functions.https.onRequest(app);
